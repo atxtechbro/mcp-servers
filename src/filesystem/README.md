@@ -1,214 +1,158 @@
-# Filesystem MCP Server
+# Filesystem MCP Server (Custom Version)
 
-Node.js server implementing Model Context Protocol (MCP) for filesystem operations.
+This is a customized version of the Filesystem MCP server that modifies tool descriptions to de-emphasize the `edit` and `write` functions in favor of other tools that provide better visibility of changes.
 
-## Features
+## Security
 
-- Read/write files
-- Create/list/delete directories
-- Move files/directories
-- Search files
-- Get file metadata
+The server is designed with security in mind:
 
-**Note**: The server will only allow operations within directories specified via `args`.
+- Only directories explicitly specified as command-line arguments are accessible
+- Path traversal attacks are prevented by validating all paths
+- Symlinks are checked to ensure they don't point outside allowed directories
+- Parent directories are validated for new file creation
 
-## API
-
-### Resources
-
-- `file://system`: File system operations interface
-
-### Tools
-
-- **read_file**
-  - Read complete contents of a file
-  - Input: `path` (string)
-  - Reads complete file contents with UTF-8 encoding
-
-- **read_multiple_files**
-  - Read multiple files simultaneously
-  - Input: `paths` (string[])
-  - Failed reads won't stop the entire operation
-
-- **write_file**
-  - Create new file or overwrite existing (exercise caution with this)
-  - Inputs:
-    - `path` (string): File location
-    - `content` (string): File content
-
-- **edit_file**
-  - Make selective edits using advanced pattern matching and formatting
-  - Features:
-    - Line-based and multi-line content matching
-    - Whitespace normalization with indentation preservation
-    - Multiple simultaneous edits with correct positioning
-    - Indentation style detection and preservation
-    - Git-style diff output with context
-    - Preview changes with dry run mode
-  - Inputs:
-    - `path` (string): File to edit
-    - `edits` (array): List of edit operations
-      - `oldText` (string): Text to search for (can be substring)
-      - `newText` (string): Text to replace with
-    - `dryRun` (boolean): Preview changes without applying (default: false)
-  - Returns detailed diff and match information for dry runs, otherwise applies changes
-  - Best Practice: Always use dryRun first to preview changes before applying them
-
-- **create_directory**
-  - Create new directory or ensure it exists
-  - Input: `path` (string)
-  - Creates parent directories if needed
-  - Succeeds silently if directory exists
-
-- **list_directory**
-  - List directory contents with [FILE] or [DIR] prefixes
-  - Input: `path` (string)
-
-- **move_file**
-  - Move or rename files and directories
-  - Inputs:
-    - `source` (string)
-    - `destination` (string)
-  - Fails if destination exists
-
-- **search_files**
-  - Recursively search for files/directories
-  - Inputs:
-    - `path` (string): Starting directory
-    - `pattern` (string): Search pattern
-    - `excludePatterns` (string[]): Exclude any patterns. Glob formats are supported.
-  - Case-insensitive matching
-  - Returns full paths to matches
-
-- **get_file_info**
-  - Get detailed file/directory metadata
-  - Input: `path` (string)
-  - Returns:
-    - Size
-    - Creation time
-    - Modified time
-    - Access time
-    - Type (file/directory)
-    - Permissions
-
-- **list_allowed_directories**
-  - List all directories the server is allowed to access
-  - No input required
-  - Returns:
-    - Directories that this server can read/write from
-
-## Usage with Claude Desktop
-Add this to your `claude_desktop_config.json`:
-
-Note: you can provide sandboxed directories to the server by mounting them to `/projects`. Adding the `ro` flag will make the directory readonly by the server.
-
-### Docker
-Note: all directories must be mounted to `/projects` by default.
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--mount", "type=bind,src=/Users/username/Desktop,dst=/projects/Desktop",
-        "--mount", "type=bind,src=/path/to/other/allowed/dir,dst=/projects/other/allowed/dir,ro",
-        "--mount", "type=bind,src=/path/to/file.txt,dst=/projects/path/to/file.txt",
-        "mcp/filesystem",
-        "/projects"
-      ]
-    }
-  }
-}
-```
-
-### NPX
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/username/Desktop",
-        "/path/to/other/allowed/dir"
-      ]
-    }
-  }
-}
-```
-
-## Usage with VS Code
-
-For quick installation, click the installation buttons below...
-
-[![Install with NPX in VS Code](https://img.shields.io/badge/VS_Code-NPM-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=filesystem&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40modelcontextprotocol%2Fserver-filesystem%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D) [![Install with NPX in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-NPM-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=filesystem&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40modelcontextprotocol%2Fserver-filesystem%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D&quality=insiders)
-
-[![Install with Docker in VS Code](https://img.shields.io/badge/VS_Code-Docker-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=filesystem&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22--mount%22%2C%22type%3Dbind%2Csrc%3D%24%7BworkspaceFolder%7D%2Cdst%3D%2Fprojects%2Fworkspace%22%2C%22mcp%2Ffilesystem%22%2C%22%2Fprojects%22%5D%7D) [![Install with Docker in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=filesystem&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22--mount%22%2C%22type%3Dbind%2Csrc%3D%24%7BworkspaceFolder%7D%2Cdst%3D%2Fprojects%2Fworkspace%22%2C%22mcp%2Ffilesystem%22%2C%22%2Fprojects%22%5D%7D&quality=insiders)
-
-For manual installation, add the following JSON block to your User Settings (JSON) file in VS Code. You can do this by pressing `Ctrl + Shift + P` and typing `Preferences: Open Settings (JSON)`.
-
-Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace. This will allow you to share the configuration with others.
-
-> Note that the `mcp` key is not needed in the `.vscode/mcp.json` file.
-
-You can provide sandboxed directories to the server by mounting them to `/projects`. Adding the `ro` flag will make the directory readonly by the server.
-
-### Docker
-Note: all directories must be mounted to `/projects` by default. 
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "filesystem": {
-        "command": "docker",
-        "args": [
-          "run",
-          "-i",
-          "--rm",
-          "--mount", "type=bind,src=${workspaceFolder},dst=/projects/workspace",
-          "mcp/filesystem",
-          "/projects"
-        ]
-      }
-    }
-  }
-}
-```
-
-### NPX
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "filesystem": {
-        "command": "npx",
-        "args": [
-          "-y",
-          "@modelcontextprotocol/server-filesystem",
-          "${workspaceFolder}"
-        ]
-      }
-    }
-  }
-}
-```
-
-## Build
-
-Docker build:
+## Usage
 
 ```bash
-docker build -t mcp/filesystem -f src/filesystem/Dockerfile .
+npx @modelcontextprotocol/filesystem-server ~/allowed/directory1 /another/allowed/directory
 ```
 
-## License
+You can specify multiple directories to allow access to.
 
-This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+## Available Tools
+
+- `read_file`: Read the contents of a file
+- `read_multiple_files`: Read the contents of multiple files at once
+- `write_file`: (LOW PRIORITY) Create a new file or overwrite an existing file - consider using other tools instead
+- `edit_file`: (LOW PRIORITY) Make line-based edits to a text file - consider using other tools instead
+- `create_directory`: Create a new directory
+- `list_directory`: List the contents of a directory
+- `directory_tree`: Get a recursive tree view of files and directories
+- `move_file`: Move or rename a file or directory
+- `search_files`: Search for files matching a pattern
+- `get_file_info`: Get metadata about a file or directory
+- `list_allowed_directories`: List the directories that the server is allowed to access
+
+## Tool Priority
+
+This custom version modifies the descriptions of `write_file` and `edit_file` to indicate they should be used with caution and as a lower priority compared to other tools that provide better visibility of changes.
+
+## Examples
+
+### Reading a file
+
+```json
+{
+  "name": "read_file",
+  "arguments": {
+    "path": "~/Documents/notes.txt"
+  }
+}
+```
+
+### Writing a file (use with caution)
+
+```json
+{
+  "name": "write_file",
+  "arguments": {
+    "path": "~/Documents/new-file.txt",
+    "content": "Hello, world!"
+  }
+}
+```
+
+### Editing a file (use with caution)
+
+```json
+{
+  "name": "edit_file",
+  "arguments": {
+    "path": "~/Documents/config.json",
+    "edits": [
+      {
+        "oldText": "  \"debug\": false,",
+        "newText": "  \"debug\": true,"
+      }
+    ]
+  }
+}
+```
+
+### Creating a directory
+
+```json
+{
+  "name": "create_directory",
+  "arguments": {
+    "path": "~/Documents/new-project/src"
+  }
+}
+```
+
+### Listing a directory
+
+```json
+{
+  "name": "list_directory",
+  "arguments": {
+    "path": "~/Documents"
+  }
+}
+```
+
+### Getting a directory tree
+
+```json
+{
+  "name": "directory_tree",
+  "arguments": {
+    "path": "~/Documents/project"
+  }
+}
+```
+
+### Moving a file
+
+```json
+{
+  "name": "move_file",
+  "arguments": {
+    "source": "~/Documents/old-name.txt",
+    "destination": "~/Documents/new-name.txt"
+  }
+}
+```
+
+### Searching for files
+
+```json
+{
+  "name": "search_files",
+  "arguments": {
+    "path": "~/Documents",
+    "pattern": "report",
+    "excludePatterns": ["node_modules", ".git"]
+  }
+}
+```
+
+### Getting file info
+
+```json
+{
+  "name": "get_file_info",
+  "arguments": {
+    "path": "~/Documents/report.pdf"
+  }
+}
+```
+
+### Listing allowed directories
+
+```json
+{
+  "name": "list_allowed_directories",
+  "arguments": {}
+}
+```
