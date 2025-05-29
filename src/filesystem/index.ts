@@ -356,16 +356,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "write_file",
         description:
-          "Create a new file or completely overwrite an existing file with new content. " +
-          "Use with caution as it will overwrite existing files without warning. " +
-          "Handles text content with proper encoding. Only works within allowed directories.",
+          "CAUTION: Creates a new file or completely overwrites an existing file. " +
+          "Consider using other tools like fs_read and fs_write instead for better " +
+          "visibility of changes. This tool provides no diff view and will silently " +
+          "overwrite existing content. Only works within allowed directories.",
         inputSchema: zodToJsonSchema(WriteFileArgsSchema) as ToolInput,
       },
       {
         name: "edit_file",
         description:
-          "Make line-based edits to a text file. Each edit replaces exact line sequences " +
-          "with new content. Returns a git-style diff showing the changes made. " +
+          "LOW PRIORITY TOOL: Consider using fs_read and fs_write instead for better " +
+          "visibility of changes. This tool makes line-based edits to text files, but " +
+          "requires exact matching of text sequences which can be error-prone. " +
           "Only works within allowed directories.",
         inputSchema: zodToJsonSchema(EditFileArgsSchema) as ToolInput,
       },
