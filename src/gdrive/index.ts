@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { authenticate } from "@google-cloud/local-auth";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -13,6 +12,9 @@ import fs from "fs";
 import { google } from "googleapis";
 import path from "path";
 import { fileURLToPath } from 'url';
+import http from 'http';
+import { URL } from 'url';
+import open from 'open';
 
 const drive = google.drive("v3");
 
@@ -181,15 +183,61 @@ const credentialsPath = process.env.GDRIVE_CREDENTIALS_PATH || path.join(
   "../../../.gdrive-server-credentials.json",
 );
 
-async function authenticateAndSaveCredentials() {
-  console.log("Launching auth flow…");
-  const auth = await authenticate({
-    keyfilePath: process.env.GDRIVE_OAUTH_PATH || path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "../../../gcp-oauth.keys.json",
-    ),
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+const FIXED_PORT = 3000;
+
+// Fixed port authentication to replace @google-cloud/local-auth
+async function authenticateFixedPort(keyfilePath: string, scopes: string[]) {
+  const keys = JSON.parse(fs.readFileSync(keyfilePath, 'utf8'));
+  const { client_id, client_secret } = keys.installed;
+  
+  const oauth2Client = new google.auth.OAuth2(
+    client_id,
+    client_secret,
+    `http://localhost:${FIXED_PORT}`
+  );
+  
+  return new Promise((resolve, reject) => {
+    const server = http.createServer(async (req, res) => {
+      try {
+        const url = new URL(req.url!, `http://localhost:${FIXED_PORT}`);
+        const code = url.searchParams.get('code');
+        
+        if (code) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end('<h1>Authentication successful!</h1><p>You can close this window.</p>');
+          
+          const { tokens } = await oauth2Client.getToken(code);
+          oauth2Client.setCredentials(tokens);
+          
+          server.close();
+          resolve(oauth2Client);
+        }
+      } catch (error) {
+        server.close();
+        reject(error);
+      }
+    });
+    
+    server.listen(FIXED_PORT, () => {
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+      });
+      
+      console.log(`Open this URL in your browser: ${authUrl}`);
+      open(authUrl);
+    });
   });
+}
+
+async function authenticateAndSaveCredentials() {
+  console.log("Launching auth flow (fixed port 3000)…");
+  const keyfilePath = process.env.GDRIVE_OAUTH_PATH || path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../gcp-oauth.keys.json",
+  );
+  
+  const auth = await authenticateFixedPort(keyfilePath, ["https://www.googleapis.com/auth/drive.readonly"]);
   fs.writeFileSync(credentialsPath, JSON.stringify(auth.credentials));
   console.log("Credentials saved. You can now run the server.");
 }
