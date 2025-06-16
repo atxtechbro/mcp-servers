@@ -183,7 +183,7 @@ const credentialsPath = process.env.GDRIVE_CREDENTIALS_PATH || path.join(
   "../../../.gdrive-server-credentials.json",
 );
 
-const FIXED_PORT = 3000;
+const FIXED_PORT = 47291;
 
 // Fixed port authentication to replace @google-cloud/local-auth
 async function authenticateFixedPort(keyfilePath: string, scopes: string[]) {
